@@ -15,7 +15,7 @@ async def read_users():
             raise HTTPException(status_code=404, detail="No users found.")
         return users
     except Exception as e:
-        if e.status_code and e.status_code == 404:
+        if e.status_code and e.status_code == 404:  
             raise HTTPException(status_code=404, detail="No users found.")
         else:
             raise HTTPException(status_code=500, detail=str(e))
@@ -43,6 +43,14 @@ async def get_user(user_uuid: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Route: Update a user by UUID
+@router.put("/users/", tags=["users"], response_model=ReadUser)
+async def create_user(User):
+    try:
+        #
+        return created_user
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Route: Delete a user by UUID
 @router.delete("/users/{user_uuid}", tags=["users"])
