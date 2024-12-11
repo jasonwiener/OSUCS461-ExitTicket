@@ -11,7 +11,7 @@ class UserLogic:
     def get_all_users() -> List[ReadUser]:
         """Fetch all users from the database."""
         query = "SELECT uuid, name, time_created FROM user"  # Ensure the table name is correct
-        results = DB.query(query)
+        results = DB.run(query)
         if results is True or not results:
             return []
         return [ReadUser(uuid=row[0], name=row[1], time_created=row[2]) for row in results]
@@ -21,7 +21,7 @@ class UserLogic:
         """Fetch a user by UUID."""
         query = f"SELECT uuid, name, time_created FROM user WHERE uuid = '{uuid}'"
         print('executing q:', query)
-        result = DB.query(query)
+        result = DB.run(query)
         if not result:
             raise ValueError(f"User with UUID {uuid} not found.")
         return ReadUser(uuid=result[0][0], name=result[0][1], time_created=result[0][2])
@@ -38,7 +38,7 @@ class UserLogic:
         uuid = hashlib.sha224(raw_uuid.encode('utf-8')).hexdigest()
 
         query = f"INSERT INTO user (uuid, name, time_created) VALUES ('{uuid}', '{name}', '{timestamp}')"
-        DB.query(query)
+        DB.run(query)
         
         return UserLogic.get_by_uuid(uuid)
 
@@ -55,21 +55,21 @@ class UserLogic:
         else:
             # Update an existing user
             query = f"UPDATE user SET name = {user.name} WHERE uuid = {user.uuid}"
-            DB.query(query)
+            DB.run(query)
             return user.uuid
 
     @staticmethod
     def delete(uuid: str):
         """Delete a user by UUID."""
         query = f"DELETE FROM user WHERE uuid = {uuid}"
-        DB.query(query)
+        DB.run(query)
 
 class PostLogic:
     @staticmethod
     def get_by_uuid(uuid: str) -> ReadUserPost:
         """Fetch a post by UUID from the database."""
         query = f"SELECT uuid, user_uuid, post_9char, test, time_created FROM user_post WHERE uuid = '{uuid}'"
-        result = DB.query(query)
+        result = DB.run(query)
         if not result:
             raise ValueError(f"Post with UUID {uuid} not found.")
         return ReadUserPost(
@@ -91,11 +91,11 @@ class PostLogic:
         else:
             # Update an existing post
             query = f"UPDATE user_post SET user_uuid = {post.user_uuid}, post_9char = {post.post_9char}, test = {post.test}, time_created = {post.time_created} WHERE uuid = {post.uuid}"
-            DB.query(query)
+            DB.run(query)
             return post.uuid
 
     @staticmethod
     def delete(uuid: str):
         """Delete a post by UUID."""
         query = f"DELETE FROM user_post WHERE uuid = {uuid}"
-        DB.query(query)
+        DB.run(query)
