@@ -22,7 +22,10 @@ class UserPost(BaseModel):
 	test: str
 	time_created: int
 
-
+# creation
+class CreateUserRequest(BaseModel):
+    email: str
+    
 class ReadUser(User):
     uuid: str
 

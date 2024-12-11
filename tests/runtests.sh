@@ -1,6 +1,6 @@
 #!/bin/sh
 
-url="http://127.0.0.1:8855/v1"
+url=${API_URL:-"http://127.0.0.1:8855/v1"}
 
 status() {
     printf "\n=====================================================\n"
@@ -10,58 +10,66 @@ status() {
 
 # Usage: method '{"key": "value"}' /endpoint
 post() {
-    curl -X 'POST' -H "Content-Type: application/json" -d "$1" $url$2
+    curl -s -w "\nHTTP_CODE:%{http_code}" -X 'POST' -H "Content-Type: application/json" -d "$1" $url$2
 }
 get() {
-    curl -X 'GET' \
-  $url$1 \
-  -H 'accept: application/json'
+    curl -s -w "\nHTTP_CODE:%{http_code}" -X 'GET' $url$1 -H 'accept: application/json'
 }
 put() {
-    curl -X 'PUT' -H "Content-Type: application/json" -d "$1" $url$2
+    curl -s -w "\nHTTP_CODE:%{http_code}" -X 'PUT' -H "Content-Type: application/json" -d "$1" $url$2
 }
 delete() {
-    curl -X 'DELETE' $url$1
+    curl -s -w "\nHTTP_CODE:%{http_code}" -X 'DELETE' $url$1
 }
 
-# getting all users initially should return none initially, 404
-status "getting /users"
+# Example Usage
+status "Getting /users"
 response=$(get /users/)
-echo "GOT: $response"
-# posting a user needs an email, should return the user
-# errors should be handled
+http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
+echo "GOT: $(echo "$response" | head -n -1)"
+echo "HTTP_CODE: $http_code"
+
+if [ "$http_code" -eq 404 ]; then
+    echo "No users found, as expected."
+else
+    echo "Unexpected response."
+fi
+
 new='{
     "email": "example@gmail.com",
     "time_created": 0
 }'
 
-status "posting /users: $new"
+status "Posting /users: $new"
 response=$(post "$new" /users/)
-echo "GOT: $response"
+http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
+user_id=$(echo "$response" | head -n -1 | jq -r '.uid')
+echo "GOT: $(echo "$response" | head -n -1)"
+echo "HTTP_CODE: $http_code"
 
-# get the uid 
-uid=0
+if [ "$http_code" -ne 201 ]; then
+    echo "Failed to create user"
+    exit 1
+fi
 
-# put
+status "Updating user: $user_id"
 update='{
-    "email": "example@gmail.com",
+    "email": "updated_example@gmail.com",
     "time_created": 0
 }'
+response=$(put "$update" /users/$user_id)
+http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
+echo "GOT: $(echo "$response" | head -n -1)"
+echo "HTTP_CODE: $http_code"
 
-status "putting update: $uid"
-response=$(put "$update" /users/$uid)
-echo "GOT: $response"
+status "Getting user: $user_id"
+response=$(get /users/$user_id)
+http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
+echo "GOT: $(echo "$response" | head -n -1)"
+echo "HTTP_CODE: $http_code"
 
-#  get again
-status "getting all"
-response=$(get /users/)
-echo "GOT: $response"
-
-status "getting: $uid"
-response=$(get /users/$uid)
-echo "GOT: $response"
-
-# delete
-status "deleting: $uid"
-response=$(delete /users/$uid)
-echo "GOT: $response"
+status "Deleting user: $user_id"
+response=$(delete /users/$user_id)
+http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
+echo "GOT: $(echo "$response" | head -n -1)"
+echo "HTTP_CODE: $http_code"
