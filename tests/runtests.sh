@@ -1,6 +1,6 @@
 #!/bin/sh
 
-url="http://127.0.0.1:8855"
+url="http://127.0.0.1:8855/v1"
 
 status() {
     printf "\n=====================================================\n"
@@ -10,19 +10,58 @@ status() {
 
 # Usage: method '{"key": "value"}' /endpoint
 post() {
-    curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d "$1" $url$2
+    curl -X 'POST' -H "Content-Type: application/json" -d "$1" $url$2
 }
 get() {
-    curl -X GET -H "Authorization: Bearer $TOKEN" $url$1
+    curl -X 'GET' \
+  $url$1 \
+  -H 'accept: application/json'
 }
 put() {
-    curl -X PUT -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d "$1" $url$2
+    curl -X 'PUT' -H "Content-Type: application/json" -d "$1" $url$2
 }
 delete() {
-    curl -X DELETE -H "Authorization: Bearer $TOKEN" $url$1
+    curl -X 'DELETE' $url$1
 }
 
-# getting a user without auth should fail and return 401 with Forbidden as the body
+# getting all users initially should return none initially, 404
 status "getting /users"
-response=$(curl -X GET $url/v1/users/)
+response=$(get /users/)
+echo "GOT: $response"
+# posting a user needs an email, should return the user
+# errors should be handled
+new='{
+    "email": "example@gmail.com",
+    "time_created": 0
+}'
+
+status "posting /users: $new"
+response=$(post "$new" /users/)
+echo "GOT: $response"
+
+# get the uid 
+uid=0
+
+# put
+update='{
+    "email": "example@gmail.com",
+    "time_created": 0
+}'
+
+status "putting update: $uid"
+response=$(put "$update" /users/$uid)
+echo "GOT: $response"
+
+#  get again
+status "getting all"
+response=$(get /users/)
+echo "GOT: $response"
+
+status "getting: $uid"
+response=$(get /users/$uid)
+echo "GOT: $response"
+
+# delete
+status "deleting: $uid"
+response=$(delete /users/$uid)
 echo "GOT: $response"
