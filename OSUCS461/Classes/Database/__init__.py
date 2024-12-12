@@ -11,20 +11,19 @@ class UserLogic:
     def get_all_users() -> List[ReadUser]:
         """Fetch all users from the database."""
         query = "SELECT uuid, name, time_created FROM user"  # Ensure the table name is correct
-        results = DB.run(query)
-        if results is True or not results:
+        results = DB.get_results(query)
+        if not results:
             return []
-        return [ReadUser(uuid=row[0], name=row[1], time_created=row[2]) for row in results]
+        return results
 
     @staticmethod
     def get_by_uuid(uuid: str) -> ReadUser:
         """Fetch a user by UUID."""
         query = f"SELECT uuid, name, time_created FROM user WHERE uuid = '{uuid}'"
-        print('executing q:', query)
-        result = DB.run(query)
+        result = DB.get_row(query)
         if not result:
             raise ValueError(f"User with UUID {uuid} not found.")
-        return ReadUser(uuid=result[0][0], name=result[0][1], time_created=result[0][2])
+        return result
 
     @staticmethod
     def create(name: str) -> ReadUser:
@@ -38,38 +37,29 @@ class UserLogic:
         uuid = hashlib.sha224(raw_uuid.encode('utf-8')).hexdigest()
 
         query = f"INSERT INTO user (uuid, name, time_created) VALUES ('{uuid}', '{name}', '{timestamp}')"
-        DB.run(query)
-        
+        DB.query(query)
         return UserLogic.get_by_uuid(uuid)
 
     @staticmethod
     def save(user: User) -> str:
-        """Insert or update the user in the database."""
-        if user.uuid == "0":
-            import time
-            timestamp = str(time.time())
-            # Insert a new user
-            query = f"INSERT INTO user (name, time_created) VALUES ('{user.name}', '{timestamp}')"
-            user_id = DB.insert(query)
-            return user_id
-        else:
-            # Update an existing user
-            query = f"UPDATE user SET name = {user.name} WHERE uuid = {user.uuid}"
-            DB.run(query)
-            return user.uuid
+        """Update the user in the database."""
+        # Update an existing user
+        query = f"UPDATE user SET name = '{user.name}' WHERE uuid = '{user.uuid}'"
+        DB.run(query)
+        return UserLogic.get_by_uuid(user.uuid)
 
     @staticmethod
     def delete(uuid: str):
         """Delete a user by UUID."""
-        query = f"DELETE FROM user WHERE uuid = {uuid}"
-        DB.run(query)
+        query = f"DELETE FROM user WHERE uuid = '{uuid}'"
+        return DB.query(query)
 
 class PostLogic:
     @staticmethod
     def get_by_uuid(uuid: str) -> ReadUserPost:
         """Fetch a post by UUID from the database."""
         query = f"SELECT uuid, user_uuid, post_9char, test, time_created FROM user_post WHERE uuid = '{uuid}'"
-        result = DB.run(query)
+        result = DB.get_row(query)
         if not result:
             raise ValueError(f"Post with UUID {uuid} not found.")
         return ReadUserPost(
@@ -86,16 +76,16 @@ class PostLogic:
         if post.uuid == "0":
             # Insert a new post
             query = f"INSERT INTO user_post (user_uuid, post_9char, test, time_created) VALUES ('{post.user_uuid}', '{post.post_9char}', '{post.test}', '{post.time_created}')"
-            post_id = DB.insert(query)
+            post_id = DB.query(query)
             return post_id
         else:
             # Update an existing post
-            query = f"UPDATE user_post SET user_uuid = {post.user_uuid}, post_9char = {post.post_9char}, test = {post.test}, time_created = {post.time_created} WHERE uuid = {post.uuid}"
+            query = f"UPDATE user_post SET user_uuid = '{post.user_uuid}', post_9char = '{post.post_9char}', test = '{post.test}', time_created = '{post.time_created}' WHERE uuid = '{post.uuid}'"
             DB.run(query)
             return post.uuid
 
     @staticmethod
     def delete(uuid: str):
         """Delete a post by UUID."""
-        query = f"DELETE FROM user_post WHERE uuid = {uuid}"
-        DB.run(query)
+        query = f"DELETE FROM user_post WHERE uuid = '{uuid}'"
+        DB.query(query)

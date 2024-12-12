@@ -21,8 +21,7 @@ async def read_users():
 @router.post("/users/", tags=["users"], response_model=ReadUser)
 async def create_user(user: CreateUserRequest):
     try:
-        user_id = UserLogic.create(user.email)
-        created_user = UserLogic.get_by_uuid(user_id)
+        created_user = UserLogic.create(user.email)
         if not created_user:
             raise HTTPException(status_code=404, detail="User could not be retrieved after creation.")
         return created_user

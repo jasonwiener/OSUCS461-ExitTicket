@@ -43,11 +43,11 @@ new='{
 status "Posting /users: $new"
 response=$(post "$new" /users/)
 http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
-user_id=$(echo "$response" | head -n -1 | jq -r '.uid')
+user_id=$(echo "$response" | head -n -1 | jq -r '.uuid')
 echo "GOT: $(echo "$response" | head -n -1)"
 echo "HTTP_CODE: $http_code"
 
-if [ "$http_code" -ne 201 ]; then
+if [ "$http_code" -ne 200 ]; then
     echo "Failed to create user"
     exit 1
 fi
