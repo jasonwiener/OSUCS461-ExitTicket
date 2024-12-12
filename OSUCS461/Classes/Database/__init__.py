@@ -14,7 +14,7 @@ class UserLogic:
         results = DB.get_results(query)
         if not results:
             return []
-        return results
+        return [ReadUser(uuid=row['uuid'], name=row['name'], time_created=row['time_created']) for row in results]
 
     @staticmethod
     def get_by_uuid(uuid: str) -> ReadUser:
@@ -23,7 +23,7 @@ class UserLogic:
         result = DB.get_row(query)
         if not result:
             raise ValueError(f"User with UUID {uuid} not found.")
-        return result
+        return ReadUser(uuid=result['uuid'], name=result['name'], time_created=result['time_created'])
 
     @staticmethod
     def create(name: str) -> ReadUser:
@@ -38,11 +38,12 @@ class UserLogic:
 
         query = f"INSERT INTO user (uuid, name, time_created) VALUES ('{uuid}', '{name}', '{timestamp}')"
         DB.query(query)
+        
         return UserLogic.get_by_uuid(uuid)
 
     @staticmethod
     def save(user: User) -> str:
-        """Update the user in the database."""
+        """Insert or update the user in the database."""
         # Update an existing user
         query = f"UPDATE user SET name = '{user.name}' WHERE uuid = '{user.uuid}'"
         DB.run(query)

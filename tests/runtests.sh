@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 url=${API_URL:-"http://127.0.0.1:8855/v1"}
 
@@ -25,14 +25,14 @@ delete() {
 # Example Usage
 status "Getting /users"
 response=$(get /users/)
+
 http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
 echo "GOT: $(echo "$response" | head -n -1)"
 echo "HTTP_CODE: $http_code"
-
 if [ "$http_code" -eq 404 ]; then
     echo "No users found, as expected."
 else
-    echo "Unexpected response."
+    echo "Unexpected response: $http_code $response"
 fi
 
 new='{
@@ -62,14 +62,33 @@ http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
 echo "GOT: $(echo "$response" | head -n -1)"
 echo "HTTP_CODE: $http_code"
 
+if [ "$http_code" -ne 200 ]; then
+    echo "Failed to update user"
+    exit 1
+fi
+
+
 status "Getting user: $user_id"
 response=$(get /users/$user_id)
 http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
 echo "GOT: $(echo "$response" | head -n -1)"
 echo "HTTP_CODE: $http_code"
 
+if [ "$http_code" -ne 200 ]; then
+    echo "Failed to get user"
+    exit 1
+fi
+
 status "Deleting user: $user_id"
 response=$(delete /users/$user_id)
 http_code=$(echo "$response" | tail -n 1 | sed 's/HTTP_CODE://')
 echo "GOT: $(echo "$response" | head -n -1)"
 echo "HTTP_CODE: $http_code"
+
+if [ "$http_code" -ne 200 ]; then
+    echo "Failed to delete user"
+    exit 1
+fi
+
+
+status "All tests passed"

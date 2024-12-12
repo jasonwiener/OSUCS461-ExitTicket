@@ -43,12 +43,22 @@ async def get_user(user_uuid: str):
 
 # Route: Update a user by UUID
 @router.put("/users/{user_uuid}", tags=["users"], response_model=ReadUser)
-async def update_user(user_uuid: str, user: User):
+async def update_user(user_uuid: str, nuser: dict):
     try:
-        updated = UserLogic.update(user_uuid, user)
-        if not updated:
+        user = UserLogic.get_by_uuid(user_uuid)
+        # only name can be edited
+        try:
+            if "name" in nuser:
+                name = nuser["name"]
+            elif "email" in nuser:
+                name = nuser["email"]
+            else:
+                name = user.name
+        except Exception as e:
+            name=user.name
+        updated_user = User(uuid=user.uuid, name=name, time_created=user.time_created)
+        if not updated_user:
             raise HTTPException(status_code=404, detail="User not found for update.")
-        updated_user = UserLogic.get_by_uuid(user_uuid)
         return updated_user
     except HTTPException as e:
         raise e
@@ -60,6 +70,7 @@ async def update_user(user_uuid: str, user: User):
 async def delete_user(user_uuid: str):
     try:
         deleted = UserLogic.delete(user_uuid)
+        
         if not deleted:
             raise HTTPException(status_code=404, detail="User not found for deletion.")
         return {"message": "User deleted successfully"}
