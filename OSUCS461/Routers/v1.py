@@ -7,7 +7,7 @@ router = APIRouter()
 
 # Route: Get all users
 @router.get("/users/", tags=["users"], response_model=List[ReadUser])
-async def read_users():
+async def get_all_users():
     try:
         users = UserLogic.get_all_users()
         if not users:
@@ -86,7 +86,7 @@ async def delete_user(user_uuid: str):
 
 # Route: Get all posts
 @router.get("/posts/", tags=["posts"], response_model=List[PreviewUserPost])
-async def get_all():
+async def get_all_posts():
     try:
         posts = PostLogic.get_all()
         if not posts or posts == []:
@@ -111,10 +111,9 @@ async def get_user_posts(user_uuid: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-
 # Route: Get post by UUID
 @router.get("/posts/{post_uuid}", tags=["posts"], response_model=ReadUserPost)
-async def get_user_posts(post_uuid: str):
+async def get_post(post_uuid: str):
     try:
         post = PostLogic.get_by_uuid(post_uuid)
         if not post:
