@@ -1,10 +1,17 @@
 import hashlib
+import time
 from typing import List
 from OSUCS461.Config import MySQL as DatabaseConfig
 from OSUCS461.ThirdParty.MySQL import MySQL
-from Models import User, UserPost, ReadUser, ReadUserPost  # Adjust path as needed
+from Models import User, UserPost, ReadUser, ReadUserPost, PreviewUserPost  # Adjust path as needed
 DB = MySQL(**DatabaseConfig)
 
+def timeandu(seed):
+    timestamp = str(time.time())
+    raw_uuid = f"{seed}-{timestamp}"
+    uuid = hashlib.sha224(raw_uuid.encode('utf-8')).hexdigest()
+    return timestamp, uuid
+    
 class UserLogic:
     @staticmethod
         
@@ -31,62 +38,85 @@ class UserLogic:
         Create a new user with a unique UUID.
         The UUID is generated using an SHA224 hash of the name and the current timestamp.
         """
-        import time
-        timestamp = str(time.time())
-        raw_uuid = f"{name}-{timestamp}"
-        uuid = hashlib.sha224(raw_uuid.encode('utf-8')).hexdigest()
-
+        timestamp, uuid = timeandu(name)
         query = f"INSERT INTO user (uuid, name, time_created) VALUES ('{uuid}', '{name}', '{timestamp}')"
-        DB.query(query)
-        
+        res = DB.query(query)
+        if not res:
+            raise ValueError('Post failed')
         return UserLogic.get_by_uuid(uuid)
 
     @staticmethod
-    def save(user: User) -> str:
+    def save(user: User) -> ReadUser:
         """Insert or update the user in the database."""
         # Update an existing user
         query = f"UPDATE user SET name = '{user.name}' WHERE uuid = '{user.uuid}'"
-        DB.run(query)
+        res = DB.query(query)
+        if not res:
+            raise ValueError('Post failed')
         return UserLogic.get_by_uuid(user.uuid)
 
     @staticmethod
-    def delete(uuid: str):
+    def delete(uuid: str) -> bool:
         """Delete a user by UUID."""
         query = f"DELETE FROM user WHERE uuid = '{uuid}'"
         return DB.query(query)
 
 class PostLogic:
     @staticmethod
+    def get_all() -> List[PreviewUserPost]:
+        """Fetch all posts"""
+        query = f"SELECT uuid, post_9char, time_created FROM user_post"
+        results = DB.get_results(query)
+        if not results:
+            return []
+        return [PreviewUserPost(uuid=row['uuid'], post_9char=row['post_9char'], time_created=row['time_created']) for row in results]
+    
+    @staticmethod
     def get_by_uuid(uuid: str) -> ReadUserPost:
-        """Fetch a post by UUID from the database."""
-        query = f"SELECT uuid, user_uuid, post_9char, test, time_created FROM user_post WHERE uuid = '{uuid}'"
+        """Fetch a post by post UUID from the database."""
+        query = f"SELECT uuid, user_uuid, post_9char, text, time_created FROM user_post WHERE uuid = '{uuid}'"
         result = DB.get_row(query)
         if not result:
-            raise ValueError(f"Post with UUID {uuid} not found.")
+            return []
         return ReadUserPost(
-            uuid=result[0][0],
-            user_uuid=result[0][1],
-            post_9char=result[0][2],
-            test=result[0][3],
-            time_created=result[0][4],
+            uuid=result['uuid'],
+            user_uuid=result['user_uuid'],
+            post_9char=result['post_9char'],
+            text=result['text'],
+            time_created=result['time_created'],
         )
-
+    
     @staticmethod
-    def save(post: UserPost) -> str:
-        """Insert or update the post in the database."""
-        if post.uuid == "0":
+    def get_by_user(uuid: str) -> List[PreviewUserPost]:
+        """Fetch all posts by user UUID from the database."""
+        query = f"SELECT uuid, post_9char, time_created FROM user_post WHERE user_uuid = '{uuid}'"
+        results = DB.get_results(query)
+        if not results or results == []:
+            raise ValueError(f"Posts with user UUID {uuid} not found.")
+        return [PreviewUserPost(uuid=row['uuid'], post_9char=row['post_9char'], time_created=row['time_created']) for row in results]
+    
+    @staticmethod
+    def create(text: str, uuuid: str) -> ReadUserPost: # souja boy tellem    uuu
             # Insert a new post
-            query = f"INSERT INTO user_post (user_uuid, post_9char, test, time_created) VALUES ('{post.user_uuid}', '{post.post_9char}', '{post.test}', '{post.time_created}')"
-            post_id = DB.query(query)
-            return post_id
-        else:
-            # Update an existing post
-            query = f"UPDATE user_post SET user_uuid = '{post.user_uuid}', post_9char = '{post.post_9char}', test = '{post.test}', time_created = '{post.time_created}' WHERE uuid = '{post.uuid}'"
-            DB.run(query)
-            return post.uuid
+            timestamp, uuid = timeandu(text)
+            query = f"INSERT INTO user_post (uuid, user_uuid, post_9char, text, time_created) VALUES ('{uuid}', '{uuuid}', '{text[:9]}', '{text}', '{timestamp}')"
+            res = DB.query(query)
+            if not res:
+                raise ValueError('Post failed')
+            return PostLogic.get_by_uuid(uuid)
+    
+    @staticmethod
+    def save(post: UserPost) -> ReadUserPost:
+        """Insert or update the post in the database."""
+        # Update an existing post
+        query = f"UPDATE user_post SET user_uuid = '{post.user_uuid}', post_9char = '{post.post_9char}', text = '{post.text}', time_created = '{post.time_created}' WHERE uuid = '{post.uuid}'"
+        res = DB.query(query)
+        if not res:
+            raise ValueError('Post save failed')
+        return PostLogic.get_by_uuid(post.uuid)
 
     @staticmethod
-    def delete(uuid: str):
+    def delete(uuid: str) -> bool:
         """Delete a post by UUID."""
         query = f"DELETE FROM user_post WHERE uuid = '{uuid}'"
-        DB.query(query)
+        return DB.query(query)
